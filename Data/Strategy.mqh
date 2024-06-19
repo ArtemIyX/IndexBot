@@ -138,6 +138,16 @@ double CStrategy::CalcLots(double slDistance) {
       return 0.0;
    }
    double lots = MathFloor(riskMoney / moneyLotStep) * lotStep;
+   
+   double minVolume = SymbolInfoDouble(sym, SYMBOL_VOLUME_MIN);
+   double maxVolume = SymbolInfoDouble(sym, SYMBOL_VOLUME_MAX);
+   
+   if(lots >= maxVolume)
+      lots = maxVolume;
+      
+   if(lots <= minVolume)
+      lots = minVolume;
+
    return lots;
 }
 //+------------------------------------------------------------------+
