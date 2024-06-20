@@ -9,7 +9,9 @@ namespace LarryInput {
    input ulong InpMagic = 200;                     // Magic
    input double InpRisk = 1.0;                     // Risk
    input double InpSlCoef = 1.5;                   // Stop Loss
+   input double InpTpCoef = 1.5;                   // Take Profit
    input ETradeSide InpSide = ETradeSide::Both;    // Trades
+   input ETakeProfitMethod InpTakeProfit = ETakeProfitMethod::Manual; // Take Profit Method
    input int InpMaPeriod = 200;                    // Filter Period
    input double InpRsiLower = 25.0;                // Lower RSI
    input double InpRsiUpper = 75.0;                // Upper RSI
@@ -58,6 +60,8 @@ public:
       return new CLarryRsi(new CLarryRsiParams(
          CStrategyParams(
             LarryInput::InpSide,
+            LarryInput::InpTakeProfit,
+            LarryInput::InpTpCoef,
             LarryInput::InpMagic,
             LarryInput::InpRisk,
             14,

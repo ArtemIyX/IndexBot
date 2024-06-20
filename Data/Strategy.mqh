@@ -23,9 +23,17 @@ enum EClosePositions {
    Sell
 };
 
+enum ETakeProfitMethod {
+   Ratio,
+   Manual,
+   Both
+};
+
 class CStrategyParams {
 public:
    ETradeSide        TradeSide;
+   ETakeProfitMethod TakeProfit;
+   double            TpCoef;
    ulong             Magic;
    double            Risk;
    int               AtrPeriod;
@@ -33,15 +41,25 @@ public:
    string            Comment;
 
 public:
-   CStrategyParams(ETradeSide side, ulong magic, double risk, int atrPeriod, double slCoef, string comment = "")
-      :              TradeSide(side), Magic(magic), Risk(risk), AtrPeriod(atrPeriod), SlCoef(slCoef),
+   CStrategyParams(ETradeSide side, ETakeProfitMethod tp,
+                   double tpCoef,
+                   ulong magic, double risk, int atrPeriod, double slCoef, string comment = "")
+      :              TradeSide(side), TakeProfit(tp), TpCoef(tpCoef),
+                     Magic(magic), Risk(risk), AtrPeriod(atrPeriod), SlCoef(slCoef),
                      Comment(comment) {
 
    }
 
    // Copy constructor
    CStrategyParams(const CStrategyParams &other)
-      : TradeSide(other.TradeSide), Magic(other.Magic), Risk(other.Risk), AtrPeriod(other.AtrPeriod), SlCoef(other.SlCoef), Comment(other.Comment) {
+      : TradeSide(other.TradeSide),
+        TakeProfit(other.TakeProfit),
+        TpCoef(other.TpCoef),
+        Magic(other.Magic),
+        Risk(other.Risk),
+        AtrPeriod(other.AtrPeriod),
+        SlCoef(other.SlCoef),
+        Comment(other.Comment) {
    }
 };
 
@@ -138,13 +156,13 @@ double CStrategy::CalcLots(double slDistance) {
       return 0.0;
    }
    double lots = MathFloor(riskMoney / moneyLotStep) * lotStep;
-   
+
    double minVolume = SymbolInfoDouble(sym, SYMBOL_VOLUME_MIN);
    double maxVolume = SymbolInfoDouble(sym, SYMBOL_VOLUME_MAX);
-   
+
    if(lots >= maxVolume)
       lots = maxVolume;
-      
+
    if(lots <= minVolume)
       lots = minVolume;
 
@@ -173,7 +191,14 @@ bool CStrategy::BuyLong(MqlTick& tick) {
    PrintFormat("Tick ask: %f, tick atr: %f", tick.ask, atr);
    double sl = CalcBuySl(tick.ask, atr);
    double lots = CalcLots(tick.ask - sl);
-   trade.Buy(lots, Symbol(), tick.ask, sl, 0.0, params.Comment);
+   double tp = NormalizePrice(0.0);
+
+   if(params.TakeProfit == ETakeProfitMethod::Both ||
+         params.TakeProfit == ETakeProfitMethod::Ratio) {
+      double dist = MathAbs(tick.ask - sl);
+      tp = NormalizePrice(tick.ask + (dist * params.TpCoef));
+   }
+   trade.Buy(lots, Symbol(), tick.ask, sl, tp, params.Comment);
    return true;
 }
 
@@ -187,7 +212,16 @@ bool CStrategy::SellShort(MqlTick& tick) {
    }
    double sl = CalcSellSl(tick.bid, atr);
    double lots = CalcLots(sl - tick.bid);
-   trade.Sell(lots, Symbol(), tick.bid, sl, 0.0, params.Comment);
+
+   double tp = NormalizePrice(0.0);
+
+   if(params.TakeProfit == ETakeProfitMethod::Both ||
+         params.TakeProfit == ETakeProfitMethod::Ratio) {
+      double dist = MathAbs(sl - tick.bid);
+      tp = NormalizePrice(tick.bid + (dist * params.TpCoef));
+   }
+
+   trade.Sell(lots, Symbol(), tick.bid, sl, tp, params.Comment);
    return true;
 }
 
@@ -327,12 +361,23 @@ void CStrategy::Tick(MqlTick& tick) {
 
 // Can we close something?
    if((cntBuy + cntSell) > 0) {
+      // Have buy positions and we should close
       if(cntBuy > 0 && CanCloseBuy()) {
-         ClosePositions(sym, EClosePositions::Buy);
+         // We allowed to close only if Manual method is not permitted
+         if(params.TakeProfit == ETakeProfitMethod::Both ||
+               params.TakeProfit == ETakeProfitMethod::Manual) {
+            ClosePositions(sym, EClosePositions::Buy);
+         }
+
       }
 
+   // Have sell positions and we should close
       if(cntSell > 0 && CanCloseSell()) {
-         ClosePositions(sym, EClosePositions::Sell);
+         // We allowed to close only if Manual method is not permitted
+         if(params.TakeProfit == ETakeProfitMethod::Both ||
+               params.TakeProfit == ETakeProfitMethod::Manual) {
+            ClosePositions(sym, EClosePositions::Sell);
+         }
       }
       return;
    } else {
