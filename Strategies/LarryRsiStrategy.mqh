@@ -3,18 +3,23 @@
 //|                                  Copyright 2024, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //+------------------------------------------------------------------+
+
+#ifndef CLarryRsi_MQH
+#define CLarryRsi_MQH
 #include "..\Data\Strategy.mqh"
+
 namespace LarryInput {
-   input group "Larry - [RSI]";
-   input ulong InpMagic = 200;                     // Magic
-   input double InpRisk = 1.0;                     // Risk
-   input double InpSlCoef = 1.5;                   // Stop Loss
-   input double InpTpCoef = 1.5;                   // Take Profit
-   input ETradeSide InpSide = ETradeSide::Both;    // Trades
-   input ETakeProfitMethod InpTakeProfit = ETakeProfitMethod::Manual; // Take Profit Method
-   input int InpMaPeriod = 200;                    // Filter Period
-   input double InpRsiLower = 25.0;                // Lower RSI
-   input double InpRsiUpper = 75.0;                // Upper RSI
+input group "Larry - [RSI]";
+input bool InpFlag_Larry = true;                      // On/Off
+input ulong InpMagic_Larry = 200;                     // Magic
+input double InpRisk_Larry = 1.0;                     // Risk
+input double InpSlCoef_Larry = 1.5;                   // Stop Loss
+input double InpTpCoef_Larry = 1.5;                   // Take Profit
+input ETradeSide InpSide_Larry = ETradeSide::Both;    // Trades
+input ETakeProfitMethod InpTakeProfit_Larry = ETakeProfitMethod::Manual; // Take Profit Method
+input int InpMaPeriod_Larry = 200;                    // Filter Period
+input double InpRsiLower_Larry = 25.0;                // Lower RSI
+input double InpRsiUpper_Larry = 75.0;                // Upper RSI
 }
 
 
@@ -36,7 +41,7 @@ protected:
    CLarryRsiParams* AsLarry() {
       return (CLarryRsiParams*)(this.params);
    }
-   
+
    int GetLarrySignal() {
       double arr[];
       // Copy Larry RSI Indicator signal result
@@ -45,11 +50,11 @@ protected:
          PrintFormat("Failed to obtain larry buffer! (%d)", num);
          return 0;
       }
-      
+
       // Return previous (closed) candle data
       return (int)(arr[1]);
    }
-   
+
    int larryHandle;
 public:
    CLarryRsi(CLarryRsiParams* strategyParams) : CStrategy(strategyParams) {
@@ -57,20 +62,24 @@ public:
    }
 
    static CLarryRsi* Build() {
-      return new CLarryRsi(new CLarryRsiParams(
-         CStrategyParams(
-            LarryInput::InpSide,
-            LarryInput::InpTakeProfit,
-            LarryInput::InpTpCoef,
-            LarryInput::InpMagic,
-            LarryInput::InpRisk,
-            14,
-            LarryInput::InpSlCoef,
-            "Larry RSI(2)"), 
-         LarryInput::InpMaPeriod, 
-         LarryInput::InpRsiLower,
-         LarryInput::InpRsiUpper
-      ));
+      if(LarryInput::InpFlag_Larry) {
+         return new CLarryRsi(new CLarryRsiParams(
+                                 CStrategyParams(
+                                    LarryInput::InpSide_Larry,
+                                    LarryInput::InpTakeProfit_Larry,
+                                    LarryInput::InpTpCoef_Larry,
+                                    LarryInput::InpMagic_Larry,
+                                    LarryInput::InpRisk_Larry,
+                                    14,
+                                    LarryInput::InpSlCoef_Larry,
+                                    "Larry RSI(2)"),
+                                 LarryInput::InpMaPeriod_Larry,
+                                 LarryInput::InpRsiLower_Larry,
+                                 LarryInput::InpRsiUpper_Larry
+                              ));
+      } else {
+         return NULL;
+      }
    }
    virtual bool      CanBuy() override;
    virtual bool      CanSell() override;
@@ -82,24 +91,30 @@ public:
 };
 //+------------------------------------------------------------------+
 
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
 bool CLarryRsi::Init() {
    if(!CStrategy::Init()) {
       return false;
    }
    string sym = Symbol();
    CLarryRsiParams* customParams = AsLarry();
-   
-   larryHandle = iCustom(sym, PERIOD_CURRENT, "Barotrauma\\LarryRsi", 
-      customParams.MaPeriod,
-      2,
-      customParams.RsiLower,
-      customParams.RsiUpper);
-      
+
+   larryHandle = iCustom(sym, PERIOD_CURRENT, "Barotrauma\\LarryRsi",
+                         customParams.MaPeriod,
+                         2,
+                         customParams.RsiLower,
+                         customParams.RsiUpper);
+
    return true;
 }
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
 bool CLarryRsi::Deinit()  {
    IndicatorRelease(larryHandle);
-   return CLarryRsi::Deinit();
+   return CStrategy::Deinit();
 }
 
 //+------------------------------------------------------------------+
@@ -127,4 +142,7 @@ bool CLarryRsi::CanCloseBuy() {
 bool CLarryRsi::CanCloseSell() {
    return false;
 }
+//+------------------------------------------------------------------+
+
+#endif // CLarryRsi_MQH
 //+------------------------------------------------------------------+

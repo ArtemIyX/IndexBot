@@ -45,7 +45,9 @@ void CStrategyManager::FreeStrategies() {
 //|                                                                  |
 //+------------------------------------------------------------------+
 void CStrategyManager::AddStrategy(CStrategy* strat) {
-   strategies.Add(strat);
+   if(strat != NULL) {
+      strategies.Add(strat);
+   }
 }
 
 //+------------------------------------------------------------------+

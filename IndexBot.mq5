@@ -8,7 +8,9 @@
 //+------------------------------------------------------------------+
 #include "Data\StrategyManager.mqh"
 #include "Data\Strategy.mqh"
-#include "Strategies\LarryRsiStrategy.mqh"
+//#include "Strategies\LarryRsiStrategy.mqh"
+#include "Strategies\ReliableMrStrategy.mqh"
+
 
 CStrategyManager* manager;
 
@@ -24,7 +26,13 @@ int OnInit() {
 }
 
 void InitStrategies() {
+#ifdef CLarryRsi_MQH
    manager.AddStrategy(CLarryRsi::Build());
+#endif
+
+#ifdef CReliableMR_MQH
+   manager.AddStrategy(CReliableMR::Build());
+#endif
 }
 //+------------------------------------------------------------------+
 //| Expert deinitialization function                                 |
